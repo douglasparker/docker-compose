@@ -8,7 +8,7 @@ services:
       - net_admin
       - sys_module
     env_file:
-      - stack.env
+      - ../stack.env
     volumes:
       - data:/var/lib
       - /dev/net/tun:/dev/net/tun
