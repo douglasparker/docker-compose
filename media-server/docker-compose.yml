@@ -1,4 +1,88 @@
 services:
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    network_mode: host
+    hostname: plex
+    depends_on:
+      media-storage:
+        condition: service_healthy
+    # Host network mode must be used for local clients to stream locally.
+    # The default bridge mode will isolate the network, and then ports are mapped to the host.
+    # Bridge mode results in plex seeing local clients (192.168.1.x) as being on an external network due to the internal Docker IP address (172.x.0.1) being on an isolated network.
+    # Furthermore, all media server docker apps run with host networking so that way everything is functional even without both internet access (externally via domain) and without a router (192.168.1.3)
+    environment:
+      - PUID=10000
+      - PGID=10000
+      - TZ=Etc/UTC
+    # Port mapping is ignored while host networking is used.
+    # Manual port forwarding is required.
+    # ports:
+      # - 32400:32400/tcp # Access to the Plex Media Server [required]
+
+      # The following additional ports are also used within the local network for different services:
+      # Warning!: For security, we very strongly recommend that you do not allow any of these “additional” ports through the firewall or to be forwarded in your router, in cases specifically where your Plex Media Server is running on a machine with a public/WAN IP address. This includes those hosted in a data center as well as machines on a “local network” that have been put into the “DMZ” (the “de-militarized zone”) of the network router. This is not a setup that applies to most users.
+      
+      # - 3005:3005/tcp # Plex Companion
+      # - 8324:8324/tcp # Controlling Plex for Roku via Plex Companion
+      # - 32469:32469/tcp # Access to the Plex DLNA Server
+      # - 1900:1900/udp # Access to the Plex DLNA Server (Disabled because we do not use DLNA and it conflicts with Jellyfin)
+      # - 32410:32410/udp # GDM network discovery
+      # - 32412:32412/udp # GDM network discovery
+      # - 32413:32413/udp # GDM network discovery
+      # - 32414:32414/udp # GDM network discovery
+    volumes:
+      - plex-data:/config
+      - /mnt/media:/media
+      - /dev/shm:/dev/shm # Transcode to RAM
+    restart: unless-stopped
+
+  media-storage:
+    image: rclone/rclone:latest
+    container_name: media-storage
+    devices:
+      - /dev/fuse
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - /root/.config/rclone/rclone.conf:/root/.config/rclone/rclone.conf:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - /mnt/media:/mnt/media:shared
+    # --dir-cache-time=0 since there is no polling on sftp remote
+    # otherwise imports / updates to files will take forever to be updated over the network
+    command: "mount storage-server:/media /mnt/media --umask 002 --allow-other --allow-non-empty --buffer-size 16M --dir-cache-time 0 --vfs-cache-mode full --vfs-cache-max-age 10s --vfs-read-chunk-size 128M --vfs-read-chunk-size-limit off --transfers 64 --checkers 64 --log-level INFO"
+    healthcheck:
+      test: "[ -d /mnt/media/movies ]"
+    restart: unless-stopped
+    
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+    environment:
+      - TZ="Etc/UTC"
+    ports:
+      - 5055:5055
+    volumes:
+      - overseerr-data:/app/config
+    restart: unless-stopped
+    
+  radarr:
+    image: linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=10000
+      - PGID=10000
+      - TZ=Etc/UTC
+    ports:
+      - 7878:7878
+    volumes:
+      - radarr-data:/config
+      - /mnt/media:/media
+    restart: unless-stopped
+    
   radarr-4k:
     image: linuxserver/radarr:latest
     container_name: radarr-4k
@@ -10,6 +94,20 @@ services:
       - 7879:7878
     volumes:
       - radarr-4k-data:/config
+      - /mnt/media:/media
+    restart: unless-stopped
+
+  sonarr:
+    image: linuxserver/sonarr:4.0.0-develop
+    container_name: sonarr
+    environment:
+      - PUID=10000
+      - PGID=10000
+      - TZ=Etc/UTC
+    ports:
+      - 8989:8989
+    volumes:
+      - sonarr-data:/config
       - /mnt/media:/media
     restart: unless-stopped
 
@@ -27,6 +125,121 @@ services:
       - /mnt/media:/media
     restart: unless-stopped
 
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=10000
+      - PGID=10000
+      - TZ=Etc/UTC
+    ports:
+      - 8686:8686
+    volumes:
+      - lidarr-data:/config
+      - /mnt/media:/media
+    restart: unless-stopped
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      - PUID=10000
+      - PGID=10000
+      - TZ=Etc/UTC
+    ports:
+      - 8787:8787
+    volumes:
+      - readarr-data:/config
+      - /mnt/media:/media
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=10000
+      - PGID=10000
+      - TZ=Etc/UTC
+    ports:
+      - 9696:9696
+    volumes:
+      - prowlarr-data:/config
+    restart: unless-stopped
+
+  bazarr:
+    image: linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=10000
+      - PGID=10000
+      - TZ=Etc/UTC
+    ports:
+      - 6767:6767
+    volumes:
+      - bazarr-data:/config
+      - /mnt/media:/media
+    restart: unless-stopped
+
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:latest
+    container_name: tdarr
+    environment:
+      - TZ=Etc/UTC
+      - PUID=10000
+      - PGID=10000
+      - UMASK_SET=002
+      - serverIP=0.0.0.0
+      - serverPort=8266
+      - webUIPort=8265
+      - internalNode=true
+      - nodeID=Local
+    ports:
+      - 8265:8265
+    volumes:
+      - tdarr-bin:/app/server
+      - tdarr-data:/app/configs
+      - tdarr-logs:/app/logs
+      - /mnt/media:/media
+    restart: unless-stopped
+
+  recyclarr:
+    image: ghcr.io/recyclarr/recyclarr:latest
+    container_name: recyclarr
+    user: 10000:10000
+    environment:
+      - RECYCLARR_CREATE_CONFIG=true
+      - CRON_SCHEDULE=*/15 * * * *
+    volumes:
+      - recyclarr-data:/config
+    restart: unless-stopped
+  
+  tautulli:
+    image: ghcr.io/tautulli/tautulli:latest
+    container_name: tautulli
+    environment:
+      - PUID=10000
+      - PGID=10000
+      - TZ=Etc/UTC
+    ports:
+      - 8181:8181
+    volumes:
+      - tautulli-data:/config
+      # - "/docker/media-server-migrate/plex/Library/Application Support/Plex Media Server/Logs:/plex-logs"
+    restart: unless-stopped
+
 volumes:
+  plex-data:
+  overseerr-data:
+  radarr-data:
   radarr-4k-data:
+  sonarr-data:
   sonarr-4k-data:
+  lidarr-data:
+  readarr-data:
+  prowlarr-data:
+  bazarr-data:
+  tdarr-bin:
+  tdarr-data:
+  tdarr-logs:
+  recyclarr-data:
+  tautulli-data:
