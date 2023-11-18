@@ -224,7 +224,7 @@ services:
       - 8181:8181
     volumes:
       - tautulli-data:/config
-      # - "/docker/media-server-migrate/plex/Library/Application Support/Plex Media Server/Logs:/plex-logs"
+      - plex-data:/plex:ro
     restart: unless-stopped
 
 volumes:
