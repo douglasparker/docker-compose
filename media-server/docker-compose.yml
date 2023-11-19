@@ -82,20 +82,6 @@ services:
       - radarr-data:/config
       - /mnt/media:/media
     restart: unless-stopped
-    
-  radarr-4k:
-    image: ghcr.io/linuxserver/radarr:latest
-    container_name: radarr-4k
-    environment:
-      - PUID=10000
-      - PGID=10000
-      - TZ=Etc/UTC
-    ports:
-      - 7879:7878
-    volumes:
-      - radarr-4k-data:/config
-      - /mnt/media:/media
-    restart: unless-stopped
 
   sonarr:
     image: ghcr.io/linuxserver/sonarr:4.0.0-develop
@@ -108,20 +94,6 @@ services:
       - 8989:8989
     volumes:
       - sonarr-data:/config
-      - /mnt/media:/media
-    restart: unless-stopped
-
-  sonarr-4k:
-    image: ghcr.io/linuxserver/sonarr:4.0.0-develop
-    container_name: sonarr-4k
-    environment:
-      - PUID=10000
-      - PGID=10000
-      - TZ=Etc/UTC
-    ports:
-      - 8990:8989
-    volumes:
-      - sonarr-4k-data:/config
       - /mnt/media:/media
     restart: unless-stopped
 
