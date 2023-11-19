@@ -203,9 +203,7 @@ volumes:
   plex-data:
   overseerr-data:
   radarr-data:
-  radarr-4k-data:
   sonarr-data:
-  sonarr-4k-data:
   lidarr-data:
   readarr-data:
   prowlarr-data:
