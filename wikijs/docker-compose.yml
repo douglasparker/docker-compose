@@ -1,0 +1,23 @@
+services:
+  wiki:
+    image: ghcr.io/requarks/wiki:2
+    container_name: "wiki"
+    depends_on:
+      - wiki-db
+    env_file:
+      - stack.env
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  wiki-db:
+    image: postgres:16-alpine
+    container_name: "wiki-db"
+    env_file:
+      - stack.env
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  db-data:
