@@ -1,0 +1,15 @@
+name: portainer
+
+services:
+  portainer:
+    image: portainer/portainer-ee:latest
+    container_name: portainer
+    ports:
+      - 127.0.0.1:9443:9443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - data:/data
+    restart: unless-stopped
+
+volumes:
+  data:
